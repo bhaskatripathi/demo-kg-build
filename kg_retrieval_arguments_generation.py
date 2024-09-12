@@ -63,7 +63,7 @@ logging.basicConfig(
 # logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 openai.api_type = "azure"
-openai.api_base = st.secrets["OPENAI_API_BASE"]
+#openai.api_base = st.secrets["OPENAI_API_BASE"]
 # openai.api_version = "2022-12-01" azure gpt-3
 openai.api_version = "2023-05-15"  # azure gpt-3.5 turbo
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -81,7 +81,7 @@ embedding_llm = LangchainEmbedding(
         model="text-embedding-ada-002",
         deployment=st.secrets["EMBEDDING_DEPLOYMENT_NAME"],
         openai_api_key=openai.api_key,
-        openai_api_base=openai.api_base,
+        #openai_api_base=openai.api_base,
         openai_api_type=openai.api_type,
         openai_api_version="2022-12-01",
     ),
