@@ -16,13 +16,14 @@ import logging
 # Configure logging
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
-# Set up OpenAI
+# Set up OpenAI API key using Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Initialize OpenAI LLM
 llm = OpenAI(
     model="gpt-3.5-turbo",
     temperature=0,
+    openai_api_key=st.secrets["OPENAI_API_KEY"]  # Explicitly pass the API key
 )
 llm_predictor = LLMPredictor(llm=llm)
 
@@ -30,7 +31,7 @@ llm_predictor = LLMPredictor(llm=llm)
 embedding_llm = LangchainEmbedding(
     OpenAIEmbeddings(
         model="text-embedding-ada-002",
-        openai_api_key=openai.api_key,
+        openai_api_key=st.secrets["OPENAI_API_KEY"]  # Explicitly pass the API key
     ),
     embed_batch_size=1,
 )
@@ -92,6 +93,8 @@ kg_rag_query_engine = kg_index.as_query_engine(
     retriever_mode="keyword",
     response_mode="tree_summarize",
 )
+
+vector_rag_query_engine = vector_index.as_query_engine()
 
 
 vector_rag_query_engine = vector_index.as_query_engine()
