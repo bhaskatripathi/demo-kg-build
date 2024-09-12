@@ -1,108 +1,54 @@
 import sys
-
-sys.stdout.reconfigure(encoding="utf-8")
-sys.stdin.reconfigure(encoding="utf-8")
-
 import streamlit as st
 import streamlit.components.v1 as components
-
 import re
-
 import random
-
-CODE_KG_RAG = """
-
-# Build Knowledge Graph with KnowledgeGraphIndex 
-
-kg_index = KnowledgeGraphIndex.from_documents(
-    documents,
-    storage_context=storage_context,
-    max_triplets_per_chunk=10,
-    service_context=service_context,
-    space_name=space_name,
-    edge_types=edge_types,
-    rel_prop_names=rel_prop_names,
-    tags=tags,
-    include_embeddings=True,
-)
-
-# Create a Graph RAG Query Engine
-
-kg_rag_query_engine = kg_index.as_query_engine(
-    include_text=False,
-    retriever_mode="keyword",
-    response_mode="tree_summarize",
-)
-
-"""
-
-
 import os
 import json
 import openai
-from llama_index.llms import AzureOpenAI
+from llama_index.llms import OpenAI
 from langchain.embeddings import OpenAIEmbeddings
-from llama_index import LangchainEmbedding
-from llama_index import (
-    VectorStoreIndex,
-    SimpleDirectoryReader,
-    KnowledgeGraphIndex,
-    LLMPredictor,
-    ServiceContext,
-)
-
+from llama_index import LangchainEmbedding, VectorStoreIndex, SimpleDirectoryReader, KnowledgeGraphIndex, LLMPredictor, ServiceContext
 from llama_index.storage.storage_context import StorageContext
 from llama_index.graph_stores import NebulaGraphStore
-
 import logging
-import sys
 
-logging.basicConfig(
-    stream=sys.stdout, level=logging.INFO
-)  # logging.DEBUG for more verbose output
-# logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+# Configure logging
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
-openai.api_type = "azure"
-#openai.api_base = st.secrets["OPENAI_API_BASE"]
-# openai.api_version = "2022-12-01" azure gpt-3
-openai.api_version = "2023-05-15"  # azure gpt-3.5 turbo
+# Set up OpenAI
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-llm = AzureOpenAI(
-    engine=st.secrets["DEPLOYMENT_NAME"],
+# Initialize OpenAI LLM
+llm = OpenAI(
+    model="gpt-3.5-turbo",
     temperature=0,
-    model="gpt-35-turbo",
 )
 llm_predictor = LLMPredictor(llm=llm)
 
-# You need to deploy your own embedding model as well as your own chat completion model
+# Set up embedding model
 embedding_llm = LangchainEmbedding(
     OpenAIEmbeddings(
         model="text-embedding-ada-002",
-        deployment=st.secrets["EMBEDDING_DEPLOYMENT_NAME"],
         openai_api_key=openai.api_key,
-        #openai_api_base=openai.api_base,
-        openai_api_type=openai.api_type,
-        openai_api_version="2022-12-01",
     ),
     embed_batch_size=1,
 )
 
+# Create service context
 service_context = ServiceContext.from_defaults(
     llm_predictor=llm_predictor,
     embed_model=embedding_llm,
 )
+
+# Set up NebulaGraph connection
 os.environ["NEBULA_USER"] = st.secrets["graphd_user"]
 os.environ["NEBULA_PASSWORD"] = st.secrets["graphd_password"]
-os.environ[
-    "NEBULA_ADDRESS"
-] = f"{st.secrets['graphd_host']}:{st.secrets['graphd_port']}"
+os.environ["NEBULA_ADDRESS"] = f"{st.secrets['graphd_host']}:{st.secrets['graphd_port']}"
 
 space_name = "guardians"
-edge_types, rel_prop_names = ["relationship"], [
-    "relationship"
-]  # default, could be omit if create from an empty kg
-tags = ["entity"]  # default, could be omit if create from an empty kg
+edge_types, rel_prop_names = ["relationship"], ["relationship"]
+tags = ["entity"]
 
 graph_store = NebulaGraphStore(
     space_name=space_name,
@@ -111,8 +57,7 @@ graph_store = NebulaGraphStore(
     tags=tags,
 )
 
-from llama_index import load_index_from_storage
-
+# Load indexes
 storage_context = StorageContext.from_defaults(
     persist_dir="./storage_graph", graph_store=graph_store
 )
@@ -132,10 +77,8 @@ vector_index = load_index_from_storage(
     service_context=service_context, storage_context=storage_context_vector
 )
 
+# Set up query engines
 from llama_index.query_engine import KnowledgeGraphQueryEngine
-
-from llama_index.storage.storage_context import StorageContext
-from llama_index.graph_stores import NebulaGraphStore
 
 nl2kg_query_engine = KnowledgeGraphQueryEngine(
     storage_context=storage_context,
@@ -149,6 +92,7 @@ kg_rag_query_engine = kg_index.as_query_engine(
     retriever_mode="keyword",
     response_mode="tree_summarize",
 )
+
 
 vector_rag_query_engine = vector_index.as_query_engine()
 
